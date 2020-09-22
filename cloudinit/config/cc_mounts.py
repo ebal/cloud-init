@@ -60,6 +60,7 @@ swap file is created.
         filename: <file>
         size: <"auto"/size in bytes>
         maxsize: <size in bytes>
+        method: <fallocate/dd>
 """
 
 from string import whitespace
@@ -266,6 +267,8 @@ def create_swapfile(fname: str, size: str) -> None:
     if (fstype == "xfs" and
             util.kernel_version() < (4, 18)) or fstype == "btrfs":
         create_swap(fname, size, "dd")
+    elif (method == "dd"):
+            create_swap(fname, size, "dd")
     else:
         try:
             create_swap(fname, size, "fallocate")
@@ -283,11 +286,12 @@ def create_swapfile(fname: str, size: str) -> None:
         raise
 
 
-def setup_swapfile(fname, size=None, maxsize=None):
+def setup_swapfile(fname, size=None, maxsize=None, method='fallocate'):
     """
     fname: full path string of filename to setup
     size: the size to create. set to "auto" for recommended
     maxsize: the maximum size
+    method: how to create the swap file
     """
     swap_dir = os.path.dirname(fname)
     if str(size).lower() == "auto":
@@ -323,6 +327,7 @@ def handle_swapcfg(swapcfg):
     fname = swapcfg.get('filename', '/swap.img')
     size = swapcfg.get('size', 0)
     maxsize = swapcfg.get('maxsize', None)
+    method = swapcfg.get('method', 'fallocate')
 
     if not (size and fname):
         LOG.debug("no need to setup swap")
@@ -349,7 +354,7 @@ def handle_swapcfg(swapcfg):
             size = util.human2bytes(size)
         if isinstance(maxsize, str):
             maxsize = util.human2bytes(maxsize)
-        return setup_swapfile(fname=fname, size=size, maxsize=maxsize)
+        return setup_swapfile(fname=fname, size=size, maxsize=maxsize, method=method)
 
     except Exception as e:
         LOG.warning("failed to setup swap: %s", e)
